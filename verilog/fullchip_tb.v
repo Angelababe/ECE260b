@@ -39,7 +39,8 @@ reg clk = 0;
 reg [pr*bw-1:0] mem_in; 
 reg ofifo_rd = 0;
 reg div;
-wire [17:0] inst; 
+reg ready_to_acc;
+wire [18:0] inst; 
 reg qmem_rd = 0;
 reg qmem_wr = 0; 
 reg kmem_rd = 0; 
@@ -52,6 +53,7 @@ reg [3:0] qkmem_add = 0;
 reg [3:0] pmem_add = 0;
 reg [bw_psum+3:0] test_sum_in = 0;
 
+assign inst[18] = ready_to_acc;
 assign inst[17] = div;
 assign inst[16] = ofifo_rd;
 assign inst[15:12] = qkmem_add;
@@ -385,7 +387,7 @@ $display("##### read from psum mem to sfp_row, accumulate and divide #####");
   // add and store into internal fifo
   for (q=0; q<col+1; q=q+1) begin
     #0.5 clk = 1'b0; 
-    if (q==1) pmem_rd = 1;
+    if (q==1) pmem_rd = 1; ready_to_acc = 1;
     if (q>1) begin
        pmem_add = pmem_add + 1;
     end
@@ -394,13 +396,20 @@ $display("##### read from psum mem to sfp_row, accumulate and divide #####");
   end
 
   #0.5 clk = 1'b0;  
-  pmem_rd = 0; pmem_add = 0;
+  pmem_rd = 0; pmem_add = 0; ready_to_acc = 0;
   #0.5 clk = 1'b1;  
 
 ///////////////////////////////////////////
 
   #0.5 clk = 1'b0;
+  pmem_add = 0;
   for (q=0; q<col+1; q=q+1) begin
+    if (q==0) begin
+      pmem_rd = 1;
+    end
+    if (q>0) begin
+      pmem_add = pmem_add + 1;
+    end
     div = 1;
     #0.5 clk = 1'b1;
     #0.5 clk = 1'b0;
@@ -410,6 +419,7 @@ $display("##### read from psum mem to sfp_row, accumulate and divide #####");
     #0.5 clk = 1'b1;
     #0.5 clk = 1'b0;
   end
+  pmem_rd = 0; pmem_add = 0;
 
 
 ////////////////////////////////////////////

@@ -9,7 +9,7 @@ parameter pr = 16;
 
 input  clk; 
 input  [pr*bw-1:0] mem_in; 
-input  [17:0] inst; 
+input  [18:0] inst; 
 input  reset;
 
 input [bw_psum+3:0] test_sum_in;

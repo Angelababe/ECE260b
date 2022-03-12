@@ -74,7 +74,7 @@ module sfp_row (clk, acc, div, ready_to_div, fifo_ext_rd, sum_in, sum_out, sfp_i
      .wr_clk(clk), 
      .in(sum_q),
      .out(sum_this_core), 
-     .rd(div), 
+     .rd(div_q), 
      .wr(fifo_wr), 
      .reset(reset)
   );
@@ -112,7 +112,7 @@ module sfp_row (clk, acc, div, ready_to_div, fifo_ext_rd, sum_in, sum_out, sfp_i
        else begin
          fifo_wr <= 0;
    
-         if (div_q) begin
+         if (div) begin
            sfp_out_sign0 <= sfp_in_sign0 / sum_2core;
            sfp_out_sign1 <= sfp_in_sign1 / sum_2core;
            sfp_out_sign2 <= sfp_in_sign2 / sum_2core;

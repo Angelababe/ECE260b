@@ -18,7 +18,7 @@ input fifo_ext_rd;
 input  [bw_psum+3:0] sum_in;
 input  [pr*bw-1:0] mem_in;
 input  clk;
-input  [17:0] inst; 
+input  [18:0] inst; 
 input  reset;
 
 wire  [pr*bw-1:0] mac_in;
@@ -43,6 +43,7 @@ wire  pmem_wr;
 
 wire ofifo_valid;  // check whether the ofifo is valid (all the fifos in it are full)
 
+assign ready_to_acc = inst[18];
 assign sfd_sum_in = inst[17];
 assign ofifo_rd = inst[16];
 assign qkmem_add = inst[15:12];
@@ -112,7 +113,7 @@ sram_w16 #(.sram_bit(col*bw_psum)) psum_mem_instance (
 //TODO: acc, div, fifo_ext_rd
 sfp_row #(.col(col), .bw(bw), .bw_psum(bw_psum)) sfp_row_instance(
       .clk(clk),
-      .acc(!pmem_wr && pmem_rd),             //when to accumulate: pmem read stage pmem_wr=1, CEN==0 && WEN==0
+      .acc(ready_to_acc),             //when to accumulate: pmem read stage pmem_wr=1, CEN==0 && WEN==0
       .div(sfd_sum_in),             //when to divide: after ext rd stage
 //       .fifo_ext_rd(fifo_ext_rd),     //input, inform current core when to output to another core: after accumulate stage
 //       .ready_to_div(ready_to_div), //output, when to ask another core to input its sum
