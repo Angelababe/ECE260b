@@ -3,20 +3,22 @@
 
 // Note: in the original file, out and sum_out have no signal
 // Add input sum_in in the module to receive the sum result of the other core
-module core (clk, sum_out, sum_in, mem_in, out, inst, reset); 
+module core (clk, sum_out, sum_in, mem_in, out, ready_to_div, fifo_ext_rd, inst, reset); 
 
 parameter col = 8;
 parameter bw = 8;
-parameter bw_psum = 2*bw+4;
+parameter bw_psum = 2*bw+4; // TODO: at most 2*bw+2?
 parameter pr = 16;
 
 output [bw_psum+3:0] sum_out;
 output [bw_psum*col-1:0] out;
+output ready_to_div;
 wire   [bw_psum*col-1:0] pmem_out;
+input fifo_ext_rd;
 input  [bw_psum+3:0] sum_in;
 input  [pr*bw-1:0] mem_in;
 input  clk;
-input  [16:0] inst; 
+input  [17:0] inst; 
 input  reset;
 
 wire  [pr*bw-1:0] mac_in;
@@ -41,6 +43,7 @@ wire  pmem_wr;
 
 wire ofifo_valid;  // check whether the ofifo is valid (all the fifos in it are full)
 
+assign sfd_sum_in = inst[17];
 assign ofifo_rd = inst[16];
 assign qkmem_add = inst[15:12];
 assign pmem_add = inst[11:8];
@@ -109,9 +112,10 @@ sram_w16 #(.sram_bit(col*bw_psum)) psum_mem_instance (
 //TODO: acc, div, fifo_ext_rd
 sfp_row #(.col(col), .bw(bw), .bw_psum(bw_psum)) sfp_row_instance(
       .clk(clk),
-      .acc(pmem_wr),             //when to accumulate: pmem read stage pmem_wr=1, CEN==0 && WEN==0
-      .div,             //when to divide: after ext rd stage
-      .fifo_ext_rd,     //when to read from the other core: after accumulate stage
+      .acc(!pmem_wr && pmem_rd),             //when to accumulate: pmem read stage pmem_wr=1, CEN==0 && WEN==0
+      .div(sfd_sum_in),             //when to divide: after ext rd stage
+//       .fifo_ext_rd(fifo_ext_rd),     //input, inform current core when to output to another core: after accumulate stage
+//       .ready_to_div(ready_to_div), //output, when to ask another core to input its sum
       .sum_in(sum_in),  //24 bits input
       .sum_out(sum_out), //24 bits output
       .sfp_in(sfp_in),  //pmem out
@@ -123,6 +127,9 @@ sfp_row #(.col(col), .bw(bw), .bw_psum(bw_psum)) sfp_row_instance(
   always @(posedge clk) begin
       if(pmem_wr)
          $display("Memory write to PSUM mem add %x %x ", pmem_add, pmem_in); 
+
+        if (sfd_sum_in)
+         $display("Normalized output %x", sfp_out);
   end
 
 

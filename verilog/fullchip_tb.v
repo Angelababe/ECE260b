@@ -25,6 +25,7 @@ integer  weight [col*pr-1:0];
 integer  K[col-1:0][pr-1:0];
 integer  Q[total_cycle-1:0][pr-1:0];
 integer  result[total_cycle-1:0][col-1:0];
+integer  norm_result[total_cycle-1:0][col-1:0];
 integer  sum[total_cycle-1:0];
 
 integer i,j,k,t,p,q,s,u, m;
@@ -37,7 +38,8 @@ reg reset = 1;
 reg clk = 0;
 reg [pr*bw-1:0] mem_in; 
 reg ofifo_rd = 0;
-wire [16:0] inst; 
+reg div;
+wire [17:0] inst; 
 reg qmem_rd = 0;
 reg qmem_wr = 0; 
 reg kmem_rd = 0; 
@@ -48,8 +50,9 @@ reg execute = 0;
 reg load = 0;
 reg [3:0] qkmem_add = 0;
 reg [3:0] pmem_add = 0;
+reg [bw_psum+3:0] test_sum_in = 0;
 
-
+assign inst[17] = div;
 assign inst[16] = ofifo_rd;
 assign inst[15:12] = qkmem_add;
 assign inst[11:8]  = pmem_add;
@@ -64,9 +67,11 @@ assign inst[0] = pmem_wr;
 
 
 
-reg [bw_psum-1:0] temp5b;
 reg [bw_psum+3:0] temp_sum;
+reg [bw_psum-1:0] temp5b;
 reg [bw_psum*col-1:0] temp16b;
+reg [bw_psum-1:0] norm_temp5b;
+reg [bw_psum*col-1:0] norm_temp16b;
 
 
 
@@ -74,7 +79,8 @@ fullchip #(.bw(bw), .bw_psum(bw_psum), .col(col), .pr(pr)) fullchip_instance (
       .reset(reset),
       .clk(clk), 
       .mem_in(mem_in), 
-      .inst(inst)
+      .inst(inst),
+      .test_sum_in(test_sum_in)
 );
 
 
@@ -162,8 +168,11 @@ $display("##### K data txt reading #####");
 $display("##### Estimated multiplication result #####");
 
   for (t=0; t<total_cycle; t=t+1) begin
+    sum[t] = 0;
+
      for (q=0; q<col; q=q+1) begin
        result[t][q] = 0;
+       norm_result[t][q] = 0;
      end
   end
 
@@ -172,13 +181,23 @@ $display("##### Estimated multiplication result #####");
          for (k=0; k<pr; k=k+1) begin
             result[t][q] = result[t][q] + Q[t][k] * K[q][k];
          end
+        sum[t] = sum[t] + (result[t][q] > 0 ? result[t][q] : -result[t][q]);
 
          temp5b = result[t][q];
          temp16b = {temp16b[139:0], temp5b};
      end
 
-     //$display("%d %d %d %d %d %d %d %d", result[t][0], result[t][1], result[t][2], result[t][3], result[t][4], result[t][5], result[t][6], result[t][7]);
+     // Calculate normalized output
+     for (q=0; q<col; q=q+1) begin
+       norm_result[t][q] = result[t][q] / (sum[t] / 128);
+
+       norm_temp5b = norm_result[t][q];
+       norm_temp16b = {norm_temp16b[139:0], norm_temp5b};
+     end
+
+    //  $display("%d %d %d %d %d %d %d %d, sum: %d, normed: %d", result[t][0], result[t][1], result[t][2], result[t][3], result[t][4], result[t][5], result[t][6], result[t][7], sum[t], result[t][0]*128/sum[t]);
      $display("prd @cycle%2d: %40h", t, temp16b);
+     $display("normed prd @cycle%2d: %40h, sum: %06h", t, norm_temp16b, sum[t]);
   end
 
 //////////////////////////////////////////////
@@ -360,7 +379,40 @@ $display("##### move ofifo to pmem #####");
 
 ///////////////////////////////////////////
 
+///////////// read from psum mem to sfp_row //////////////////////////
+$display("##### read from psum mem to sfp_row, accumulate and divide #####");
 
+  // add and store into internal fifo
+  for (q=0; q<col+1; q=q+1) begin
+    #0.5 clk = 1'b0; 
+    if (q==1) pmem_rd = 1;
+    if (q>1) begin
+       pmem_add = pmem_add + 1;
+    end
+
+    #0.5 clk = 1'b1;  
+  end
+
+  #0.5 clk = 1'b0;  
+  pmem_rd = 0; pmem_add = 0;
+  #0.5 clk = 1'b1;  
+
+///////////////////////////////////////////
+
+  #0.5 clk = 1'b0;
+  for (q=0; q<col+1; q=q+1) begin
+    div = 1;
+    #0.5 clk = 1'b1;
+    #0.5 clk = 1'b0;
+    div = 0;
+    #0.5 clk = 1'b1;
+    #0.5 clk = 1'b0;
+    #0.5 clk = 1'b1;
+    #0.5 clk = 1'b0;
+  end
+
+
+////////////////////////////////////////////
 
 
   #10 $finish;

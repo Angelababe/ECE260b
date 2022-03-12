@@ -1,6 +1,6 @@
 // Created by prof. Mingu Kang @VVIP Lab in UCSD ECE department
 // Please do not spread this code without permission 
-module sfp_row (clk, acc, div, fifo_ext_rd, sum_in, sum_out, sfp_in, sfp_out);
+module sfp_row (clk, acc, div, ready_to_div, fifo_ext_rd, sum_in, sum_out, sfp_in, sfp_out);
 
   parameter col = 8;
   parameter bw = 8;
@@ -13,6 +13,7 @@ module sfp_row (clk, acc, div, fifo_ext_rd, sum_in, sum_out, sfp_in, sfp_out);
   reg    div_q;
   output [col*bw_psum-1:0] sfp_out;
   output [bw_psum+3:0] sum_out;
+  output ready_to_div;
   wire [bw_psum+3:0] sum_this_core;
   wire signed [bw_psum-1:0] sum_2core;
   wire signed [bw_psum-1:0] sfp_in_sign0;
@@ -73,7 +74,7 @@ module sfp_row (clk, acc, div, fifo_ext_rd, sum_in, sum_out, sfp_in, sfp_out);
      .wr_clk(clk), 
      .in(sum_q),
      .out(sum_this_core), 
-     .rd(div_q), 
+     .rd(div), 
      .wr(fifo_wr), 
      .reset(reset)
   );
@@ -106,11 +107,12 @@ module sfp_row (clk, acc, div, fifo_ext_rd, sum_in, sum_out, sfp_in, sfp_out);
            {4'b0, abs[bw_psum*7-1 : bw_psum*6]} +
            {4'b0, abs[bw_psum*8-1 : bw_psum*7]} ;
          fifo_wr <= 1;
+        //  ready_to_div <= 1;
        end
        else begin
          fifo_wr <= 0;
    
-         if (div) begin
+         if (div_q) begin
            sfp_out_sign0 <= sfp_in_sign0 / sum_2core;
            sfp_out_sign1 <= sfp_in_sign1 / sum_2core;
            sfp_out_sign2 <= sfp_in_sign2 / sum_2core;
