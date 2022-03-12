@@ -128,9 +128,6 @@ sfp_row #(.col(col), .bw(bw), .bw_psum(bw_psum)) sfp_row_instance(
   always @(posedge clk) begin
       if(pmem_wr)
          $display("Memory write to PSUM mem add %x %x ", pmem_add, pmem_in); 
-
-        if (sfd_sum_in)
-         $display("Normalized output %x", sfp_out);
   end
 
 

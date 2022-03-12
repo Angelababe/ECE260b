@@ -384,12 +384,12 @@ $display("##### move ofifo to pmem #####");
 ///////////// read from psum mem to sfp_row //////////////////////////
 $display("##### read from psum mem to sfp_row, accumulate and divide #####");
 
-  // add and store into internal fifo
+  // add and store into internal fifo  NOTE: this part is correct now
   for (q=0; q<col+1; q=q+1) begin
     #0.5 clk = 1'b0; 
-    if (q==1) pmem_rd = 1; ready_to_acc = 1;
-    if (q>1) begin
-       pmem_add = pmem_add + 1;
+    if (q==0) pmem_rd = 1; 
+    if (q>0) begin
+       pmem_add = pmem_add + 1; ready_to_acc = 1;
     end
 
     #0.5 clk = 1'b1;  
@@ -401,23 +401,23 @@ $display("##### read from psum mem to sfp_row, accumulate and divide #####");
 
 ///////////////////////////////////////////
 
-  #0.5 clk = 1'b0;
+  
   pmem_add = 0;
   for (q=0; q<col+1; q=q+1) begin
-    if (q==0) begin
+    #0.5 clk = 1'b0;
+    if (q==1) begin
       pmem_rd = 1;
     end
-    if (q>0) begin
+    if (q>1) begin
       pmem_add = pmem_add + 1;
     end
-    div = 1;
-    #0.5 clk = 1'b1;
+    #0.5 clk = 1'b1;   // the first rising edge, reading from psum finishes here
+    if(q>=1) div =1;   
+    #0.5 clk = 1'b0;  
+    #0.5 clk = 1'b1;   
+    if(q>=1) div =0;
     #0.5 clk = 1'b0;
-    div = 0;
     #0.5 clk = 1'b1;
-    #0.5 clk = 1'b0;
-    #0.5 clk = 1'b1;
-    #0.5 clk = 1'b0;
   end
   pmem_rd = 0; pmem_add = 0;
 

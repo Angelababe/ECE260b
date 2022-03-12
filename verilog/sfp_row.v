@@ -74,7 +74,7 @@ module sfp_row (clk, acc, div, ready_to_div, fifo_ext_rd, sum_in, sum_out, sfp_i
      .wr_clk(clk), 
      .in(sum_q),
      .out(sum_this_core), 
-     .rd(div_q), 
+     .rd(div_q),  
      .wr(fifo_wr), 
      .reset(reset)
   );
@@ -128,6 +128,12 @@ module sfp_row (clk, acc, div, ready_to_div, fifo_ext_rd, sum_in, sum_out, sfp_i
        end
    end
  end
+
+   always @(posedge clk) begin
+        if (div_q)
+         $display("Normalized output %x", sfp_out);
+  end
+
 
 
 endmodule
